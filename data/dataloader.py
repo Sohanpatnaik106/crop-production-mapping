@@ -32,8 +32,11 @@ class CropMappingDataset(Dataset):
 
         image = Image.open(image_path)
         image = self.transform(image)
+        image = image.repeat(3, 1, 1)
 
         label = Image.open(label_path)
         label = self.transform(label)
+
+        # print("here")
 
         return image, label
