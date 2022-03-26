@@ -1,3 +1,13 @@
+"""
+    Following codebase is the implementation of semantic segmentation task for 
+    Crop Production Mapping on the dataset made available by "Radiant MLHub".
+	The link to the dataset is https://mlhub.earth/data/umd_mali_crop_type
+    Five different models, namely, Fully Convolutional Network with 8, 16 and 32 layers
+	and UNet and SegNet architectures are used to carry out the experiments. To evaluate the models, 
+	IoU or Jaccard Similarity is measured over the actual and predicted segmented maps.
+"""
+
+# Import the required libraries
 import os
 import json
 import pickle
@@ -7,6 +17,8 @@ from tqdm import tqdm
 from PIL import Image
 from radiant_mlhub import Collection
 
+# Function to fetch and extract the required dataset
+# This function saves the dataset in a local directory
 def fetch_and_extract_data(dataset_name = "umd_mali_crop_type", api_key = None, save_dir = "./dataset"):
 
     print(f"\nFetching dataset {dataset_name}\n")
@@ -27,6 +39,7 @@ def fetch_and_extract_data(dataset_name = "umd_mali_crop_type", api_key = None, 
 
     print("Dataset fetched successfully\n")
 
+# Function to create the image and label pickle files
 def create_image_label_mapping(save_dir, labels_dir):
 
     labels = os.listdir(labels_dir)
@@ -37,21 +50,20 @@ def create_image_label_mapping(save_dir, labels_dir):
     images_path_list = []
 
     for label in labels:
+        
         label_map_path = os.path.join(labels_dir, label, "labels.tif")
         stac_path = os.path.join(labels_dir, label, "stac.json")
         stac = json.load(open(stac_path, "r"))
         links = stac["links"]
         links = links[4:]
+        
         for link in links:
             image_dir = link["href"]
             image_dir = image_dir[6:-10]
             image_path = os.path.join(save_dir, image_dir, "B01.tif")
             image = Image.open(image_path)
-
-
             images_path_list.append(image_path)
             labels_path_list.append(label_map_path)
-
 
     pickle.dump(images_path_list, open(os.path.join(save_dir, "images.pkl"), "wb"))
     pickle.dump(labels_path_list, open(os.path.join(save_dir, "labels.pkl"), "wb"))

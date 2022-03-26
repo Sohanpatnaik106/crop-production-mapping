@@ -1,11 +1,21 @@
+"""
+    Following codebase is the implementation of semantic segmentation task for 
+    Crop Production Mapping on the dataset made available by "Radiant MLHub".
+	The link to the dataset is https://mlhub.earth/data/umd_mali_crop_type
+    Five different models, namely, Fully Convolutional Network with 8, 16 and 32 layers
+	and UNet and SegNet architectures are used to carry out the experiments. To evaluate the models, 
+	IoU or Jaccard Similarity is measured over the actual and predicted segmented maps.
+"""
+
+# Import the required libraries
 import torch
 import torch.nn as nn
 import torch.nn.init as init
-import torch.nn.functional as F
-
-from torch.utils import model_zoo
 from torchvision import models
+import torch.nn.functional as F
+from torch.utils import model_zoo
 
+# A fully convolutional architecture with 8 layers over VGG 16 baseline architecture
 class FCN8(nn.Module):
 
     def __init__(self, num_classes):
@@ -52,7 +62,7 @@ class FCN8(nn.Module):
 
         return F.upsample_bilinear(score, x.size()[2:])
 
-
+# A fully convolutional architecture with 16 layers over VGG 16 baseline architecture
 class FCN16(nn.Module):
 
     def __init__(self, num_classes):
@@ -87,7 +97,7 @@ class FCN16(nn.Module):
 
         return F.upsample_bilinear(score, x.size()[2:])
 
-
+# A fully convolutional architecture with 32 layers over VGG 16 baseline architecture
 class FCN32(nn.Module):
 
     def __init__(self, num_classes):
@@ -111,7 +121,7 @@ class FCN32(nn.Module):
 
         return F.upsample_bilinear(score, x.size()[2:])
 
-
+# Encoder class for the UNet architecture
 class UNetEnc(nn.Module):
 
     def __init__(self, in_channels, features, out_channels):
@@ -129,7 +139,7 @@ class UNetEnc(nn.Module):
     def forward(self, x):
         return self.up(x)
 
-
+# Decoder class for the UNet architecture
 class UNetDec(nn.Module):
 
     def __init__(self, in_channels, out_channels, dropout=False):
@@ -150,7 +160,7 @@ class UNetDec(nn.Module):
     def forward(self, x):
         return self.down(x)
 
-
+# UNet architecture class used for semantic segmentation
 class UNet(nn.Module):
 
     def __init__(self, num_classes):
@@ -197,7 +207,7 @@ class UNet(nn.Module):
 
         return F.upsample_bilinear(self.final(enc1), x.size()[2:])
 
-
+# SegNet Encoder class 
 class SegNetEnc(nn.Module):
 
     def __init__(self, in_channels, out_channels, num_layers):
@@ -222,10 +232,10 @@ class SegNetEnc(nn.Module):
     def forward(self, x):
         return self.encode(x)
 
-
+# SegNet architecture for semantic segmentation task
 class SegNet(nn.Module):
 
-    def __init__(self, classes):
+    def __init__(self, num_classes):
         super().__init__()
         vgg16 = models.vgg16(pretrained=True)
         features = vgg16.features
@@ -245,8 +255,8 @@ class SegNet(nn.Module):
         self.enc2 = SegNetEnc(128, 64, 0)
 
         self.final = nn.Sequential(*[
-            nn.Conv2d(64, classes, 3, padding=1),
-            nn.BatchNorm2d(classes),
+            nn.Conv2d(64, num_classes, 3, padding=1),
+            nn.BatchNorm2d(num_classes),
             nn.ReLU(inplace=True)
         ])
 
@@ -273,93 +283,3 @@ class SegNet(nn.Module):
         e = upsample(d5)
 
         return self.final(e)
-
-
-
-class PSPDec(nn.Module):
-
-    def __init__(self, in_features, out_features, downsize, upsize=60):
-        super().__init__()
-
-        self.features = nn.Sequential(
-            nn.AvgPool2d(downsize, stride=downsize),
-            nn.Conv2d(in_features, out_features, 1, bias=False),
-            nn.BatchNorm2d(out_features, momentum=.95),
-            nn.ReLU(inplace=True),
-            nn.UpsamplingBilinear2d(upsize)
-        )
-
-    def forward(self, x):
-        return self.features(x)
-
-
-class PSPNet(nn.Module):
-
-    def __init__(self, num_classes):
-        super().__init__()
-
-        '''
-        self.conv1 = nn.Sequential(
-            nn.Conv2d(3, 64, 3, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(64, momentum=.95),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(64, 64, 3, stride=1, padding=1, bias=False),
-            nn.BatchNorm2d(64, momentum=.95),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(64, 128, 3, stride=1, padding=1, bias=False),
-            nn.BatchNorm2d(128, momentum=.95),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(3, stride=2, padding=1),
-        )
-        '''
-
-        resnet = models.resnet101(pretrained=True)
-
-        self.conv1 = resnet.conv1
-        self.layer1 = resnet.layer1
-        self.layer2 = resnet.layer2
-        self.layer3 = resnet.layer3
-        self.layer4 = resnet.layer4
-
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                m.stride = 1
-                m.requires_grad = False
-            if isinstance(m, nn.BatchNorm2d):
-                m.requires_grad = False
-
-        self.layer5a = PSPDec(2048, 512, 60)
-        self.layer5b = PSPDec(2048, 512, 30)
-        self.layer5c = PSPDec(2048, 512, 20)
-        self.layer5d = PSPDec(2048, 512, 10)
-
-        self.final = nn.Sequential(
-            nn.Conv2d(2048, 512, 3, padding=1, bias=False),
-            nn.BatchNorm2d(512, momentum=.95),
-            nn.ReLU(inplace=True),
-            nn.Dropout(.1),
-            nn.Conv2d(512, num_classes, 1),
-        )
-
-    def forward(self, x):
-        # print('x', x.size())
-        x = self.conv1(x)
-        # print('conv1', x.size())
-        x = self.layer1(x)
-        # print('layer1', x.size())
-        x = self.layer2(x)
-        # print('layer2', x.size())
-        x = self.layer3(x)
-        # print('layer3', x.size())
-        x = self.layer4(x)
-        # print('layer4', x.size())
-        x = self.final(torch.cat([
-            x,
-            self.layer5a(x),
-            self.layer5b(x),
-            self.layer5c(x),
-            self.layer5d(x),
-        ], 1))
-        # print('final', x.size())
-
-        return F.upsample_bilinear(final, x.size()[2:])
