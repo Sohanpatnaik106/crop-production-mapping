@@ -2,7 +2,7 @@
 
 The following codebase is an attempt to implement the task of semantic segmentation for mapping crop production. 
 
-In the context of climate change, land cover is a critical variable. Crop type information is especially important for understanding the spatial distribution of water use and anticipating the likelihood of water scarcity and, as a result, food insecurity. This is true in dry locations like Mali, where agriculture is primarily reliant on irrigation. Remote sensing is useful for mapping crop kinds in this case, but the quality of the data relies on reliable ground-truth data.
+In the context of climate change, land cover is a critical variable. Crop type information is especially important for understanding the spatial distribution of water use and anticipating the likelihood of water scarcity and, as a result, food insecurity. This is true in dry locations like Mali & Maharashtra in India, where agriculture is primarily reliant on irrigation. Remote sensing is useful for mapping crop kinds in this case, but the quality of the data relies on reliable ground-truth data.
 
 Furthermore, crop mapping is critical for agricultural management, economic development, and environmental conservation. We need to develop a viable technique for large-scale crop mapping using remote sensing with a huge field of view. However, most past research has concentrated on multi-temporal crop mapping, which necessitates multiple imaging over time, which is impractical to conduct during the gloomy season due to the lack of clear atmospheric windows, and thus reducing the generalisation ability of the models due to scarcity of data.
 
